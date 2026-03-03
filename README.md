@@ -5,7 +5,6 @@
 - Currently under 170SLOC of Python (will never exceed 250SLOC)
 - Editor integration similar to other file browsers
 - Can execute common Bash commands for file management without leaving the terminal
-- Configurable via a `.toml` file under `~/.config/marco`
 
 ## Installation
 
