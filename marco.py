@@ -116,7 +116,7 @@ def list_dir(path: str) -> list[str]:
 
 
 def run_shell_command(stdscr: curses.window, cwd: str) -> None:
-    """Prompt for a shell command, execute it in *cwd*, and display the output."""
+    """Prompt for a command, execute it in *cwd*, and display the output."""
     curses.echo()
     stdscr.addstr(curses.LINES - 1, 0, ":")
     stdscr.clrtoeol()
@@ -124,7 +124,6 @@ def run_shell_command(stdscr: curses.window, cwd: str) -> None:
     curses.noecho()
     if not cmd.strip():
         return
-
     proc = subprocess.Popen(
         cmd,
         shell=True,
@@ -134,7 +133,6 @@ def run_shell_command(stdscr: curses.window, cwd: str) -> None:
         text=True,
     )
     out, _ = proc.communicate()
-
     stdscr.clear()
     stdscr.addstr(0, 0, f"$ {cmd}\n")
     lines = out.splitlines()
@@ -179,9 +177,11 @@ def main(stdscr: curses.window) -> None:
     cwd = os.getcwd()
     selection = 0
 
+    # Persistent per‑directory selection state
+    dir_selection: dict[str, int] = {}
+
     while True:
         stdscr.clear()
-
         # Draw current directory on the top‑right with the normal colour pair.
         height, width = stdscr.getmaxyx()
         dir_str = cwd
@@ -193,7 +193,7 @@ def main(stdscr: curses.window) -> None:
         stdscr.addstr(0, start_x, dir_display, colors["normal"])
 
         entries = list_dir(cwd)
-        max_rows = curses.LINES - 2  # leave room for a possible command line
+        max_rows = curses.LINES - 2
         start = max(0, selection - max_rows + 1)
         visible = entries[start : start + max_rows]
 
@@ -219,15 +219,18 @@ def main(stdscr: curses.window) -> None:
             chosen = entries[selection]
             chosen_path = os.path.abspath(os.path.join(cwd, chosen))
             if os.path.isdir(chosen_path):
+                # Save current selection for the directory we are leaving
+                dir_selection[cwd] = selection
                 cwd = chosen_path
-                selection = 0
+                selection = dir_selection.get(cwd, 0)
             else:
                 open_in_editor(chosen_path, editor_cfg)
         elif key == ord("h"):
             parent = os.path.abspath(os.path.join(cwd, ".."))
             if parent != cwd:
+                dir_selection[cwd] = selection
                 cwd = parent
-                selection = 0
+                selection = dir_selection.get(cwd, 0)
         elif key == ord(":"):
             run_shell_command(stdscr, cwd)
         # other keys are ignored
