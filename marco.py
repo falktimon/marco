@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import curses
+import shutil
+import shutil
 import os
 import subprocess
 import sys
@@ -176,6 +178,10 @@ def main(stdscr: curses.window) -> None:
     curses.curs_set(0)  # Hide cursor
     cwd = os.getcwd()
     selection = 0
+    # Set of selected entries (absolute paths) per directory
+    selected: dict[str, set[str]] = {}
+    # Clipboard for copy/cut operations
+    clipboard: dict = {"paths": [], "mode": None}
 
     # Persistent per‑directory selection state
     dir_selection: dict[str, int] = {}
@@ -197,10 +203,15 @@ def main(stdscr: curses.window) -> None:
         start = max(0, selection - max_rows + 1)
         visible = entries[start : start + max_rows]
 
+        # Draw entries with selection and cursor indicators
+        selected_set = selected.get(cwd, set())
         for idx, entry in enumerate(visible):
             real_idx = start + idx
-            prefix = "\u003e " if real_idx == selection else "  "
-            line = f"{prefix}{entry}"
+            entry_path = os.path.abspath(os.path.join(cwd, entry))
+            is_selected = entry_path in selected_set
+            cursor = "> " if real_idx == selection else "  "
+            marker = "[*] " if is_selected else "    "
+            line = f"{cursor}{marker}{entry}"
             attr = colors["highlight"] if real_idx == selection else colors["normal"]
             stdscr.addstr(idx + 1, padding, line, attr)
 
@@ -233,6 +244,48 @@ def main(stdscr: curses.window) -> None:
                 selection = dir_selection.get(cwd, 0)
         elif key == ord(":"):
             run_shell_command(stdscr, cwd)
+        elif key == ord(" "):
+            # Toggle selection of the highlighted entry
+            entry_path = os.path.abspath(os.path.join(cwd, entries[selection]))
+            sel_set = selected.setdefault(cwd, set())
+            if entry_path in sel_set:
+                sel_set.remove(entry_path)
+            else:
+                sel_set.add(entry_path)
+        elif key == ord("c"):
+            # Copy selected entries to clipboard
+            sel_set = selected.get(cwd, set())
+            clipboard["paths"] = list(sel_set)
+            clipboard["mode"] = "copy"
+        elif key == ord("x"):
+            # Cut selected entries to clipboard
+            sel_set = selected.get(cwd, set())
+            clipboard["paths"] = list(sel_set)
+            clipboard["mode"] = "cut"
+        elif key == ord("p"):
+            # Paste entries from clipboard into current directory
+            if clipboard["paths"]:
+                for src in clipboard["paths"]:
+                    base = os.path.basename(src)
+                    dst = os.path.join(cwd, base)
+                    try:
+                        if os.path.isdir(src):
+                            if clipboard["mode"] == "copy":
+                                shutil.copytree(src, dst, dirs_exist_ok=True)
+                            else:
+                                shutil.move(src, dst)
+                        else:
+                            if clipboard["mode"] == "copy":
+                                shutil.copy2(src, dst)
+                            else:
+                                shutil.move(src, dst)
+                    except Exception as e:
+                        # ignore errors for now; could log
+                        pass
+                # After paste, clear clipboard for cut mode
+                if clipboard["mode"] == "cut":
+                    clipboard["paths"] = []
+                    clipboard["mode"] = None
         # other keys are ignored
 
 
