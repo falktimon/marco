@@ -18,9 +18,9 @@ except ImportError:  # pragma: no cover
 # Configuration handling
 # ----------------------------------------------------------------------
 def load_config() -> dict:
-    """Load configuration from ``~/.config/marco/marco.toml`` and ``./marco.toml``.
+    """Load configuration from ``~/.config/marco/marco.toml``, ``./marco.toml`` and ``./config.toml``.
 
-    The local file (in the current working directory) overrides the user‑level
+    The local files (in the current working directory) override the user‑level
     configuration. Missing files are ignored.
     """
     default_cfg = {
@@ -37,8 +37,9 @@ def load_config() -> dict:
     cfg: dict = default_cfg.copy()
     user_cfg_path = Path.home() / ".config" / "marco" / "marco.toml"
     local_cfg_path = Path.cwd() / "marco.toml"
+    local_config_path = Path.cwd() / "config.toml"
 
-    for path in (user_cfg_path, local_cfg_path):
+    for path in (user_cfg_path, local_cfg_path, local_config_path):
         if not path.is_file():
             continue
         try:
@@ -262,19 +263,17 @@ def main(stdscr: curses.window) -> None:
             else:
                 sel_set.add(entry_path)
         elif key == COPY_KEY:
-            # Copy selected entries to clipboard, or current entry if none selected
+            # Copy selected entries to clipboard
             sel_set = selected.get(cwd, set())
-            if not sel_set:
-                # No selection, copy the highlighted entry
-                entry_path = os.path.abspath(os.path.join(cwd, entries[selection]))
-                sel_set = {entry_path}
-            clipboard["paths"] = list(sel_set)
-            clipboard["mode"] = "copy"
+            if sel_set:
+                clipboard["paths"] = list(sel_set)
+                clipboard["mode"] = "copy"
         elif key == CUT_KEY:
             # Cut selected entries to clipboard
             sel_set = selected.get(cwd, set())
-            clipboard["paths"] = list(sel_set)
-            clipboard["mode"] = "cut"
+            if sel_set:
+                clipboard["paths"] = list(sel_set)
+                clipboard["mode"] = "cut"
         elif key == PASTE_KEY:
             # Paste entries from clipboard into current directory
             if clipboard["paths"]:
