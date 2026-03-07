@@ -268,12 +268,14 @@ def main(stdscr: curses.window) -> None:
             if sel_set:
                 clipboard["paths"] = list(sel_set)
                 clipboard["mode"] = "copy"
+                continue
         elif key == CUT_KEY:
             # Cut selected entries to clipboard
             sel_set = selected.get(cwd, set())
             if sel_set:
                 clipboard["paths"] = list(sel_set)
                 clipboard["mode"] = "cut"
+                continue
         elif key == PASTE_KEY:
             # Paste entries from clipboard into current directory
             if clipboard["paths"]:
@@ -289,7 +291,6 @@ def main(stdscr: curses.window) -> None:
                                 shutil.copytree(src, dst, dirs_exist_ok=True)
                             else:
                                 shutil.move(src, dst)
-                                # Remove source from its original selection set after cut
                                 src_dir = os.path.abspath(os.path.dirname(src))
                                 sel_set_src = selected.get(src_dir)
                                 if sel_set_src and src in sel_set_src:
@@ -304,12 +305,12 @@ def main(stdscr: curses.window) -> None:
                                 if sel_set_src and src in sel_set_src:
                                     sel_set_src.discard(src)
                     except Exception:
-                        # ignore errors for now; could log
                         pass
                 # After paste, clear clipboard for cut mode
                 if clipboard["mode"] == "cut":
                     clipboard["paths"] = []
                     clipboard["mode"] = None
+                continue
         # other keys are ignored
 
 
