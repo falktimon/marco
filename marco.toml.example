@@ -1,0 +1,22 @@
+# Marco configuration file
+# Place in ~/.config/marco/marco.toml or ./marco.toml
+
+[colors]
+bg = "default"         # Background color (default uses terminal background)
+fg = "white"           # Foreground color for entries
+highlight_fg = "black" # Foreground color for selected entry
+highlight_bg = "cyan"  # Background color for selected entry
+
+# Available colors: black, red, green, yellow, blue, magenta, cyan, white, default
+
+padding = 2            # Left padding for entries
+
+editor = null          # Editor command (null uses $EDITOR or $VISUAL or vi)
+                       # Example: editor = "code"
+
+[keybindings]
+select = " "           # Key to toggle file selection
+copy = "c"             # Key to copy selected files
+cut = "x"              # Key to cut selected files
+paste = "p"            # Key to paste files
+quit = "q"             # Key to quit marco
