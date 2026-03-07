@@ -282,13 +282,27 @@ def main(stdscr: curses.window) -> None:
                 for src in clipboard["paths"]:
                     base = os.path.basename(src)
                     dst = os.path.join(cwd, base)
-                    # Skip if source and destination are the same
-                    if os.path.abspath(src) == os.path.abspath(dst):
+                    same_location = os.path.abspath(src) == os.path.abspath(dst)
+                    # For copy mode in same directory, generate unique name
+                    if same_location and clipboard["mode"] == "copy":
+                        name, ext = os.path.splitext(base)
+                        counter = 1
+                        while True:
+                            new_name = (
+                                f"{name}_copy{ext}"
+                                if counter == 1
+                                else f"{name}_copy{counter}{ext}"
+                            )
+                            dst = os.path.join(cwd, new_name)
+                            if not os.path.exists(dst):
+                                break
+                            counter += 1
+                    elif same_location and clipboard["mode"] == "cut":
                         continue
                     try:
                         if os.path.isdir(src):
                             if clipboard["mode"] == "copy":
-                                shutil.copytree(src, dst, dirs_exist_ok=True)
+                                shutil.copytree(src, dst)
                             else:
                                 shutil.move(src, dst)
                                 src_dir = os.path.abspath(os.path.dirname(src))
