@@ -2,7 +2,6 @@
 
 import curses
 import shutil
-import shutil
 import os
 import subprocess
 import sys
@@ -26,7 +25,7 @@ def load_config() -> dict:
     """
     default_cfg = {
         "colors": {
-            "bg": "black",
+            "bg": "default",
             "fg": "white",
             "highlight_fg": "black",
             "highlight_bg": "cyan",
@@ -84,8 +83,9 @@ def init_colors(cfg: dict) -> dict:
     colour‑pair numbers to be used with ``curses.color_pair``.
     """
     curses.start_color()
+    curses.use_default_colors()
     fg = _COLOR_NAME_MAP.get(cfg["colors"].get("fg", "white"), curses.COLOR_WHITE)
-    bg = _COLOR_NAME_MAP.get(cfg["colors"].get("bg", "black"), curses.COLOR_BLACK)
+    bg = _COLOR_NAME_MAP.get(cfg["colors"].get("bg", "default"), -1)
     curses.init_pair(1, fg, bg)
 
     h_fg = _COLOR_NAME_MAP.get(
@@ -171,6 +171,13 @@ def open_in_editor(path: str, editor_cmd: str | None) -> None:
 def main(stdscr: curses.window) -> None:
     """Main UI loop for the Marco file explorer."""
     cfg = load_config()
+    # Load optional keybindings from config
+    keybindings = cfg.get("keybindings", {})
+    SPACE_KEY = ord(keybindings.get("select", " "))
+    COPY_KEY = ord(keybindings.get("copy", "c"))
+    CUT_KEY = ord(keybindings.get("cut", "x"))
+    PASTE_KEY = ord(keybindings.get("paste", "p"))
+    QUIT_KEY = ord(keybindings.get("quit", "q"))
     colors = init_colors(cfg)
     padding = cfg.get("padding", 2)
     editor_cfg = cfg.get("editor")
@@ -186,6 +193,8 @@ def main(stdscr: curses.window) -> None:
     # Persistent per‑directory selection state
     dir_selection: dict[str, int] = {}
 
+    # Set background for the whole window
+    stdscr.bkgd(" ", colors["normal"])
     while True:
         stdscr.clear()
         # Draw current directory on the top‑right with the normal colour pair.
@@ -218,7 +227,7 @@ def main(stdscr: curses.window) -> None:
         stdscr.refresh()
         key = stdscr.getch()
 
-        if key in (ord("q"), 27):  # q or ESC
+        if key in (QUIT_KEY, 27):  # q or ESC
             break
         elif key in (ord("j"), curses.KEY_DOWN):
             if selection < len(entries) - 1:
@@ -244,7 +253,7 @@ def main(stdscr: curses.window) -> None:
                 selection = dir_selection.get(cwd, 0)
         elif key == ord(":"):
             run_shell_command(stdscr, cwd)
-        elif key == ord(" "):
+        elif key == SPACE_KEY:
             # Toggle selection of the highlighted entry
             entry_path = os.path.abspath(os.path.join(cwd, entries[selection]))
             sel_set = selected.setdefault(cwd, set())
@@ -252,34 +261,50 @@ def main(stdscr: curses.window) -> None:
                 sel_set.remove(entry_path)
             else:
                 sel_set.add(entry_path)
-        elif key == ord("c"):
-            # Copy selected entries to clipboard
+        elif key == COPY_KEY:
+            # Copy selected entries to clipboard, or current entry if none selected
             sel_set = selected.get(cwd, set())
+            if not sel_set:
+                # No selection, copy the highlighted entry
+                entry_path = os.path.abspath(os.path.join(cwd, entries[selection]))
+                sel_set = {entry_path}
             clipboard["paths"] = list(sel_set)
             clipboard["mode"] = "copy"
-        elif key == ord("x"):
+        elif key == CUT_KEY:
             # Cut selected entries to clipboard
             sel_set = selected.get(cwd, set())
             clipboard["paths"] = list(sel_set)
             clipboard["mode"] = "cut"
-        elif key == ord("p"):
+        elif key == PASTE_KEY:
             # Paste entries from clipboard into current directory
             if clipboard["paths"]:
                 for src in clipboard["paths"]:
                     base = os.path.basename(src)
                     dst = os.path.join(cwd, base)
+                    # Skip if source and destination are the same
+                    if os.path.abspath(src) == os.path.abspath(dst):
+                        continue
                     try:
                         if os.path.isdir(src):
                             if clipboard["mode"] == "copy":
                                 shutil.copytree(src, dst, dirs_exist_ok=True)
                             else:
                                 shutil.move(src, dst)
+                                # Remove source from its original selection set after cut
+                                src_dir = os.path.abspath(os.path.dirname(src))
+                                sel_set_src = selected.get(src_dir)
+                                if sel_set_src and src in sel_set_src:
+                                    sel_set_src.discard(src)
                         else:
                             if clipboard["mode"] == "copy":
                                 shutil.copy2(src, dst)
                             else:
                                 shutil.move(src, dst)
-                    except Exception as e:
+                                src_dir = os.path.abspath(os.path.dirname(src))
+                                sel_set_src = selected.get(src_dir)
+                                if sel_set_src and src in sel_set_src:
+                                    sel_set_src.discard(src)
+                    except Exception:
                         # ignore errors for now; could log
                         pass
                 # After paste, clear clipboard for cut mode
