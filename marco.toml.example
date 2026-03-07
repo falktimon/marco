@@ -16,7 +16,9 @@ editor = null          # Editor command (null uses $EDITOR or $VISUAL or vi)
 
 [keybindings]
 select = " "           # Key to toggle file selection
-copy = "c"             # Key to copy selected files
-cut = "x"              # Key to cut selected files
-paste = "p"            # Key to paste files
-quit = "q"             # Key to quit marco
+copy = "c"              # Key to copy selected files
+cut = "x"               # Key to cut selected files
+paste = "p"             # Key to paste files
+page_up = "u"           # Key to scroll up half a page
+page_down = "d"         # Key to scroll down half a page
+quit = "q"              # Key to quit marco

@@ -179,6 +179,8 @@ def main(stdscr: curses.window) -> None:
     CUT_KEY = ord(keybindings.get("cut", "x"))
     PASTE_KEY = ord(keybindings.get("paste", "p"))
     QUIT_KEY = ord(keybindings.get("quit", "q"))
+    PAGE_UP_KEY = ord(keybindings.get("page_up", "u"))
+    PAGE_DOWN_KEY = ord(keybindings.get("page_down", "d"))
     colors = init_colors(cfg)
     padding = cfg.get("padding", 2)
     editor_cfg = cfg.get("editor")
@@ -236,6 +238,12 @@ def main(stdscr: curses.window) -> None:
         elif key in (ord("k"), curses.KEY_UP):
             if selection > 0:
                 selection -= 1
+        elif key == PAGE_UP_KEY:
+            half_page = max_rows // 2
+            selection = max(0, selection - half_page)
+        elif key == PAGE_DOWN_KEY:
+            half_page = max_rows // 2
+            selection = min(len(entries) - 1, selection + half_page)
         elif key in (ord("l"), curses.KEY_RIGHT, 10, 13):  # ENTER or l
             chosen = entries[selection]
             chosen_path = os.path.abspath(os.path.join(cwd, chosen))

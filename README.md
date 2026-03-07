@@ -50,6 +50,8 @@ select = " "
 copy = "c"
 cut = "x"
 paste = "p"
+page_up = "u"
+page_down = "d"
 quit = "q"
 ```
 
@@ -59,6 +61,8 @@ quit = "q"
 |---------|-------------------------------|
 | `j`/`↓` | Move down                     |
 | `k`/`↑` | Move up                       |
+| `u`     | Scroll up half a page         |
+| `d`     | Scroll down half a page       |
 | `h`     | Go to parent directory        |
 | `l`/`→` | Open directory / edit file    |
 | `Space` | Toggle selection              |
