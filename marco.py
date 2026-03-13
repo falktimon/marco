@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
 
 # Optional TOML parsing – fall back to a simple ``eval`` if the library is missing.
 try:
@@ -168,7 +169,7 @@ def run_shell_command(
         stdscr.getch()
 
 
-def open_in_editor(path: str, editor_cmd: str | None) -> None:
+def open_in_editor(path: str, editor_cmd: Optional[str]) -> None:
     """Open *path* with the configured editor.
 
     Resolution order:
