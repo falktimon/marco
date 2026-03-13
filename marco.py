@@ -120,13 +120,9 @@ def list_dir(path: str) -> list[str]:
 
 
 def run_shell_command(
-    stdscr: curses.window, cwd: str, aliases: dict, selected: dict[str, set[str]]
+    stdscr: curses.window, cwd: str, selected: dict[str, set[str]]
 ) -> None:
-    """Prompt for a command, execute it in *cwd*, and display the output.
-
-    If the command matches an alias and files are selected, the alias command
-    is run for each selected file with {file} replaced by the file path.
-    """
+    """Prompt for a command, execute it in *cwd*, and display the output."""
     curses.echo()
     stdscr.addstr(curses.LINES - 1, 0, ":")
     stdscr.clrtoeol()
@@ -135,38 +131,22 @@ def run_shell_command(
     if not cmd.strip():
         return
 
-    selected_set = selected.get(cwd, set())
-    alias_cmd = aliases.get(cmd.strip())
-
-    if alias_cmd and selected_set:
-        for filepath in selected_set:
-            expanded_cmd = alias_cmd.replace("{file}", f'"{filepath}"')
-            proc = subprocess.Popen(
-                expanded_cmd,
-                shell=True,
-                cwd=cwd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
-            proc.communicate()
-    else:
-        proc = subprocess.Popen(
-            cmd,
-            shell=True,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        out, _ = proc.communicate()
-        stdscr.clear()
-        stdscr.addstr(0, 0, f"$ {cmd}\n")
-        lines = out.splitlines()
-        for idx, line in enumerate(lines[: curses.LINES - 2]):
-            stdscr.addstr(idx + 1, 0, line)
-        stdscr.addstr(curses.LINES - 1, 0, "Press any key to continue...")
-        stdscr.getch()
+    proc = subprocess.Popen(
+        cmd,
+        shell=True,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    out, _ = proc.communicate()
+    stdscr.clear()
+    stdscr.addstr(0, 0, f"$ {cmd}\n")
+    lines = out.splitlines()
+    for idx, line in enumerate(lines[: curses.LINES - 2]):
+        stdscr.addstr(idx + 1, 0, line)
+    stdscr.addstr(curses.LINES - 1, 0, "Press any key to continue...")
+    stdscr.getch()
 
 
 def open_in_editor(path: str, editor_cmd: Optional[str]) -> None:
@@ -206,7 +186,6 @@ def main(stdscr: curses.window) -> None:
     QUIT_KEY = ord(keybindings.get("quit", "q"))
     PAGE_UP_KEY = ord(keybindings.get("page_up", "u"))
     PAGE_DOWN_KEY = ord(keybindings.get("page_down", "d"))
-    aliases = cfg.get("aliases", {})
     colors = init_colors(cfg)
     padding = cfg.get("padding", 2)
     editor_cfg = cfg.get("editor")
@@ -287,7 +266,7 @@ def main(stdscr: curses.window) -> None:
                 cwd = parent
                 selection = dir_selection.get(cwd, 0)
         elif key == ord(":"):
-            run_shell_command(stdscr, cwd, aliases, selected)
+            run_shell_command(stdscr, cwd, selected)
         elif key == SPACE_KEY:
             # Toggle selection of the highlighted entry
             entry_path = os.path.abspath(os.path.join(cwd, entries[selection]))
