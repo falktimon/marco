@@ -201,6 +201,10 @@ def main(stdscr: curses.window) -> None:
     COPY_KEY = ord(keybindings.get("copy", "c"))
     CUT_KEY = ord(keybindings.get("cut", "x"))
     PASTE_KEY = ord(keybindings.get("paste", "p"))
+    delete_key = keybindings.get("delete", "d")
+    if delete_key == "d" and "delete" not in keybindings:
+        delete_key = curses.KEY_DC
+    DELETE_KEY = ord(delete_key) if isinstance(delete_key, str) and len(delete_key) == 1 else delete_key
     QUIT_KEY = ord(keybindings.get("quit", "q"))
     PAGE_UP_KEY = ord(keybindings.get("page_up", "u"))
     PAGE_DOWN_KEY = ord(keybindings.get("page_down", "d"))
@@ -356,6 +360,22 @@ def main(stdscr: curses.window) -> None:
                 if clipboard["mode"] == "cut":
                     clipboard["paths"] = []
                     clipboard["mode"] = None
+                continue
+        elif key == DELETE_KEY:
+            # Delete selected entries
+            sel_set = selected.get(cwd, set())
+            if sel_set:
+                for filepath in list(sel_set):
+                    try:
+                        if os.path.isdir(filepath):
+                            shutil.rmtree(filepath)
+                        else:
+                            os.remove(filepath)
+                        sel_set.discard(filepath)
+                    except Exception:
+                        pass
+                if not sel_set:
+                    selected.pop(cwd, None)
                 continue
         # other keys are ignored
 
